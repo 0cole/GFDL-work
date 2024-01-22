@@ -9,10 +9,10 @@ start_date = datetime(2023, 1, 1)
 end_date = datetime(2023, 1, 31)
 
 # Temporary data path
-temp_data_path = './fre-job-data'
+temp_data_path = './data_temp'
 
 # Output JSON filepath
-file_path = "./data.json"
+file_path = "./data_output.json"
 
 def main():
     '''
@@ -57,7 +57,7 @@ def main():
     print("Completed, data output to: " + file_path + ", total jobs: " + str(job_count))
 
     # Remove temp file
-    # subprocess.run(["rm", "-f", temp_data_path])
+    subprocess.run(["rm", "-f", temp_data_path])
 
 def populate(jobs):
     '''
@@ -72,17 +72,24 @@ def populate(jobs):
         The total number of FRE jobs included in the JSON file
     '''
     job_count = 0
-    non_fre_keys = []
 
     with open(temp_data_path, 'r') as file:
-        for line in file:
+        iterator = iter(file)
+        for line in iterator:
             # Split the line into fields based on '|'
             fields = line.strip().split('|')
+
+            # If not FRE job then do not include in dictionary
+            if 'fre/' not in fields[2]:
+                continue
+
+            
+            next_fields = next(iterator).strip().split('|')
 
             JobId = fields[0]
             name = fields[1]
             comment = fields[2]
-            memory = fields[3]
+            memory = next_fields[3]
             elapsed = fields[4]
 
             if (memory=='') :
@@ -99,37 +106,8 @@ def populate(jobs):
                 'Memory': memory + ' kilobytes',
                 'Elapsed': elapsed + ' seconds'
             }
+            job_count += 1
 
-            job_data = jobs[JobId]
-
-            '''
-            To explain why this if statement is necessary, an example output will be provided for 
-            one Job:
-
-               JobId    | JobName | Comment | MaxRSS | Elapsed
-               test     | Example |  test   |        |   21
-             test.batch |  batch  |         |  300K  |   21
-            
-            Slurm does not print the comment on the same lNow.q statement collapses these two
-            lines into one by removing the '.batch' in the JobId.
-            '''
-            if ".batch" in JobId:
-                job_no_batch = JobId.replace('.batch', '')
-                jobs[job_no_batch]['Memory'] = job_data['Memory']
-            if "fre/" in job_data['Comment']:
-                job_count += 1
-                continue
-            else:
-                non_fre_keys.append(JobId)
-
-    # Remove all non FRE jobs
-    for key in non_fre_keys:
-        job = jobs.get(key)
-        # Larger version of job takes preference. A job can be duplicated if its duration 
-        # overlaps in two separate sacct calls. This if statement checks if the job was
-        # already removed
-        if job is not None:
-            jobs.pop(key)
     return job_count
 
 def outputToFile(jobs):

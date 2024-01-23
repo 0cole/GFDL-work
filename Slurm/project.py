@@ -1,18 +1,21 @@
 import subprocess
 import json
+import math
 from datetime import datetime, timedelta
 
 # Initial date
 start_date = datetime(2023, 1, 1)
 
 # End date
-end_date = datetime(2023, 1, 31)
+end_date = datetime(2023, 1, 2)
 
 # Temporary data path
 temp_data_path = './data_temp'
 
 # Output JSON filepath
 file_path = "./data_output.json"
+
+# TODO: make sure conversion from megabytes works as intended
 
 def main():
     '''
@@ -27,7 +30,7 @@ def main():
     sacct_command_prefix   = 'sacct -a --parsable2 -D -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw '
 
     # When there is more than 1 week from the current_date to the end_date
-    while current_date + timedelta(days=6) <= end_date:
+    while current_date + timedelta(days=6) < end_date:
 
         end_of_week = current_date + timedelta(days=6)
         start = f'--starttime={current_date.strftime("%Y-%m-%d")} '
@@ -40,7 +43,7 @@ def main():
         current_date += timedelta(weeks=1)
 
     # When there is less than 1 week from the current_date to the end_date
-    if current_date + timedelta(days=6) > end_date:
+    if current_date + timedelta(days=6) >= end_date:
 
         start = f'--starttime={current_date.strftime("%Y-%m-%d")} '
         end = f'--endtime={end_date.strftime("%Y-%m-%d")}'
@@ -57,7 +60,7 @@ def main():
     print("Completed, data output to: " + file_path + ", total jobs: " + str(job_count))
 
     # Remove temp file
-    subprocess.run(["rm", "-f", temp_data_path])
+    # subprocess.run(["rm", "-f", temp_data_path])
 
 def populate(jobs):
     '''
@@ -92,25 +95,33 @@ def populate(jobs):
             memory = next_fields[3]
             elapsed = fields[4]
 
-            if (memory=='') :
-                memory='0'
-            else: 
-                memory = memory[0:len(memory)-1]
-            if (elapsed=='') :
-                elapsed='0'
+            if memory == "":
+                memory = "0"
+            else:
+                # When memory is represented in the unit 'K'ilobyte
+                if "K" in memory:
+                    memory = memory.rstrip("K")
+                # When memory is represented in the unit 'M'egabyte
+                if "M" in memory:
+                    memory = memory.rstrip("M")
+                    memory = math.floor(float(memory) * 1000)
+
+            if (elapsed==""):
+                elapsed="0"
 
             # Create a dictionary entry with JobId as the keys
             jobs[JobId] = {
                 'JobName': name,
                 'Comment': comment,
-                'Memory': memory + ' kilobytes',
-                'Elapsed': elapsed + ' seconds'
+                'Memory': int(memory),
+                'Elapsed': int(elapsed)
             }
             job_count += 1
 
     return job_count
 
 def outputToFile(jobs):
+
     """
     Creates and writes to a .json File. Destination is specified in the global variable file_path.
 

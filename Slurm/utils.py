@@ -8,13 +8,12 @@ def populate(jobs, temp_data_path):
     means any job without the substring 'fre/' in its comment is excluded.
 
     Args:
-        jobs: Dictionary to be populated with all the FRE jobs
+        jobs (dict) : Dictionary to be populated with all the FRE jobs
+        temp_data_path (string) : Path that contains the output from the sacct calls that needs to be parsed
 
     Returns:
-        The total number of FRE jobs included in the JSON file
+        int : 0 upon success
     '''
-    job_count = 0
-
     with open(temp_data_path, 'r') as file:
         iterator = iter(file)
         for line in iterator:
@@ -57,7 +56,19 @@ def populate(jobs, temp_data_path):
             }
     return 0
 
-def sortedJobs(jobs, mem_cutoff):
+def sortJobs(jobs, mem_cutoff):
+    '''
+    Sorts the jobs by MaxRSS and filters out all the jobs that have an exit state of "FAILED"
+
+    Args:
+        jobs (dict) : the jobs to be filtered
+        mem_cutoff (int) : the desired MaxRSS cutoff number. Jobs with a MaxRSS less than the cutoff
+                           number will be filtered out and not included in the filtered dict
+
+    Returns:
+        sorted_jobs (dict) : a dictionary containing all the jobs that have a MaxRSS greater than the
+                             mem_cutoff and do not have an exit state of "FAILED"
+    '''
     remove_jobs = []
 
     sorted_jobs = dict(sorted(jobs.items(), key=lambda item: item[1]['Memory']))
@@ -75,6 +86,12 @@ def sortedJobs(jobs, mem_cutoff):
     return sorted_jobs
 
 def removeFile(path):
+    '''
+    Removes a file if it exists.
+
+    Args:
+        path (string) : the path name of the file to be removed
+    '''
     if os.path.isfile(path):
         os.remove(path)
         print(f"*** Removed {path} ***")
@@ -84,9 +101,10 @@ def outputToFile(jobs, file_path):
     Creates and writes to a .json File. Destination is specified in the global variable file_path.
 
     Args:
-        jobs: Dictionary of all FRE jobs
+        jobs (dict) : Dictionary of all FRE jobs
+        file_path (string) : The path name that the data should be written to
+
     """
-    
     json_obj = json.dumps(jobs, indent=4)
     with open(file_path, "w") as outfile:
         outfile.write(json_obj)

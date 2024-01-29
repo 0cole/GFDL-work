@@ -2,11 +2,20 @@ import math
 import subprocess
 
 def main():
-    # 1. Give a list of Job IDs
-    # 2. For each line in list
-    # 3.    Parse the list and call 'sacct --units=K -o MaxRSS -j <JobId> | tail -n 1'
-    # 4.    Convert to int and add to running total
-    # 5. Return
+    '''
+    Calculate and print statistics based on job memory IDs.
+
+    Computes:
+        Total memory between all jobs
+        The number of jobs that were run successfully
+        The number of jobs that failed at some point (unintended error OR user canceled)
+        Average memory per job
+        Variance between all jobs
+        Standard deviation between all jobs
+
+    Returns:
+        int : 0 upon success
+    '''
     
     path = './data_test_ids'
     ids = fetchIds(path)
@@ -26,7 +35,7 @@ def main():
     job_total = len(mem)
     mem_avg =  mem_total / job_total
 
-    mem_var, mem_stddev = findVar(mem, mem_avg)
+    mem_var, mem_stddev = fetchStats(mem, mem_avg)
 
     print("Total memory : ", mem_total)
     print("Total successful jobs : ", job_total)
@@ -38,15 +47,34 @@ def main():
     return 0
 
 def fetchIds(file_path):
+    '''
+    Separates the file passed into unique job IDs
+
+    Args:
+        file_path: The path containing the list of Job IDs
+    
+    Returns:
+        An array of the parsed Job IDs
+    '''
     path = file_path
     with open(path, 'r') as file:
         ids = [''.join(char for char in line if char.isdigit()) for line in file]
     return ids
 
-def fetchMemory(jobId):
+def fetchMemory(job_id):
+    '''
+    Given a job ID, find its corresponding memory.
+
+    Args:
+        job_id (int): The individual job ID to access that job's memory
+
+    Returns:
+        int or float: The memory in kilobytes if the job is successful.
+                      Returns -1 if the job has failed.
+    '''
     sacct_command_prefix = 'sacct --units=K --parsable2 -o MaxRSS,State -j '
     sacct_command_suffix = ' | tail -n 1'
-    run = subprocess.run(sacct_command_prefix + str(jobId) + sacct_command_suffix, 
+    run = subprocess.run(sacct_command_prefix + str(job_id) + sacct_command_suffix, 
                                    stdout=subprocess.PIPE, shell=True)  
     stdout = run.stdout.decode('utf-8')
     fields = stdout.strip().split('|')
@@ -59,14 +87,25 @@ def fetchMemory(jobId):
     
     return mem_int  
 
-def findVar(mem, average):
+def fetchStats(mem, average):
+    '''
+    Finds the variance and standard deviation of all the memories in an array.
+
+    Args:
+        mem (array) : the memories to be computed
+        average : the average value of all memories
+    
+    Returns:
+        variance (float) : the variance of mem
+        stddev (float) : the standard deviation of mem
+    '''
     N = len(mem)
 
     sum_squared_diff = sum((x - average) * (x - average) for x in mem)
 
     variance = sum_squared_diff / N
     stddev = math.sqrt(variance)
-    
+
     return variance, stddev
 
 if __name__ == "__main__":

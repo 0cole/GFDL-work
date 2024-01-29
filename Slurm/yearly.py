@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 start_date = datetime(2023, 1, 1)
 
 # End date
-end_date = datetime(2023, 12, 31)
+end_date = datetime(2023, 1, 30)
 
 # Temporary data path
 temp_data_path = './data_temp'
 
 # Output JSON filepath
-output_path = "./data_output.json"
+output_path = "./data_output.csv"
 
 # TODO: make sure conversion from megabytes works as intended
 
@@ -65,7 +65,9 @@ def main():
 
     jobs = utils.sortJobs(jobs, 50000000)
 
-    utils.outputToFile(jobs, output_path)
+    utils.outputToJSON(jobs, output_path)
+
+    utils.outputToCSV(jobs, output_path)
     
     print("Completed, data output to: " + output_path + ", total jobs: ", len(jobs))
 

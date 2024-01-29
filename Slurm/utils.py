@@ -1,4 +1,5 @@
 import os
+import csv
 import json
 
 def populate(jobs, temp_data_path):
@@ -96,7 +97,7 @@ def removeFile(path):
         os.remove(path)
         print(f"*** Removed {path} ***")
 
-def outputToFile(jobs, file_path):
+def outputToJSON(jobs, file_path):
     """
     Creates and writes to a .json File. Destination is specified in the global variable file_path.
 
@@ -108,4 +109,13 @@ def outputToFile(jobs, file_path):
     json_obj = json.dumps(jobs, indent=4)
     with open(file_path, "w") as outfile:
         outfile.write(json_obj)
-    
+
+def outputToCSV(jobs, file_path):
+
+    with open(file_path, "w", newline="") as csvfile:
+        
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(jobs.keys())
+
+        for row in zip(*jobs.values()):
+            csv_writer.writerow(row)

@@ -63,7 +63,7 @@ def main():
     # Populate jobs dictionary from data file. Only FRE jobs will exist after populate finishes
     utils.populate(jobs, temp_data_path)
 
-    jobs = utils.sortedJobs(jobs, 50000000)
+    jobs = utils.sortJobs(jobs, 50000000)
 
     utils.outputToFile(jobs, output_path)
     

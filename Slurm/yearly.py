@@ -12,7 +12,7 @@ end_date = datetime(2023, 12, 31)
 temp_data_path = './data_temp'
 
 # Output JSON filepath
-output_path = "./data_output.csv"
+output_path = "./data_output-test.csv"
 
 # TODO: make sure conversion from megabytes works as intended
 
@@ -29,13 +29,15 @@ def main():
                             Elapsed
                             Node
                             End
+                            State
     '''
     jobs = {}
     current_date = start_date
-    sacct_command_prefix   = 'sacct -a --parsable2 --units=K -D -n -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw,NodeList,End '
+    sacct_command_prefix   = 'sacct -a --parsable2 --units=K -D -n -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw,NodeList,End,State '
 
-    utils.removeFile(temp_data_path)
-    utils.removeFile(output_path)
+    # If user does not want to remove the files or error occurs
+    if utils.remove_and_check(temp_data_path) or utils.remove_and_check(output_path):
+        return
 
     # When there is more than 1 week from the current_date to the end_date
     while current_date + timedelta(days=6) < end_date:

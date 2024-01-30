@@ -35,6 +35,7 @@ def populate(jobs, temp_data_path):
             elapsed = fields[4]
             node = fields[5]
             end = fields[6]
+            state = fields[7]
 
             if memory == "":
                 memory = "0"
@@ -53,7 +54,8 @@ def populate(jobs, temp_data_path):
                 'Memory': int(memory),
                 'Elapsed': int(elapsed),
                 'Node' : node,
-                'End' : end
+                'End' : end,
+                'State' : state
             }
     return 0
 
@@ -88,14 +90,50 @@ def sortJobs(jobs, mem_cutoff):
 
 def removeFile(path):
     '''
-    Removes a file if it exists.
+    Removes a file if it exists. Asks the user before doing so and user must reply with either 'y' or 'n'.
 
     Args:
         path (string) : the path name of the file to be removed
+
+    Returns:
+        boolean : true if user inputs 'y' or file does not exist
+                  false if user inputs 'n'
     '''
-    if os.path.isfile(path):
-        os.remove(path)
-        print(f"*** Removed {path} ***")
+    result = removeFile(path)
+    if result == -2:
+        print("Quitting")
+        return True
+    elif result == -1:
+        print(f"File {path} does not exist, internal error")
+        return True
+    return False
+
+def removeHelper(path):
+    '''
+    Helper for removeFile.
+
+    Args:
+        path (string) : the path name of the file to be removed
+
+    Returns:
+        int : 0 upon success
+             -1 if file does not exist
+             -2 if user answers no
+    '''
+    verify = ""
+    while verify not in {"y", "n"}:
+        verify = input("Are you sure you would like to remove" + path + "? please enter either y/n : ")
+
+    if verify == "n":
+        return -2
+    else:
+        if os.path.isfile(path):
+            os.remove(path)
+            print(f"*** Removed {path} ***")
+            return 0
+    return -1
+
+    
 
 def outputToJSON(jobs, file_path):
     """
@@ -117,7 +155,7 @@ def outputToCSV(jobs, file_path):
         jobs (dict) : Dictionary of all FRE jobs
         file_path (string) : The path name that the data should be written to
     """
-    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed', 'Node', 'End']
+    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed', 'Node', 'End', 'State']
 
     with open(file_path, "w") as csvfile:
 

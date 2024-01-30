@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 start_date = datetime(2023, 1, 1)
 
 # End date
-end_date = datetime(2023, 1, 30)
+end_date = datetime(2023, 12, 31)
 
 # Temporary data path
 temp_data_path = './data_temp'
@@ -41,10 +41,10 @@ def main():
     while current_date + timedelta(days=6) < end_date:
 
         end_of_week = current_date + timedelta(days=6)
-        start = f'--starttime={current_date.strftime("%Y-%m-%d")} '
-        end = f'--endtime={end_of_week.strftime("%Y-%m-%d")}'
+        start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
+        end = f'--endtime={end_of_week.strftime("%Y-%m-%d")}-11:59:59'
 
-        print("collecting from : " + start + "to " + end)
+        print(f"collecting from : {start}to {end}")
 
         subprocess.run(sacct_command_prefix + start + end + ' >> ' + temp_data_path, shell=True)
 
@@ -53,10 +53,10 @@ def main():
     # When there is less than 1 week from the current_date to the end_date
     if current_date + timedelta(days=6) >= end_date:
 
-        start = f'--starttime={current_date.strftime("%Y-%m-%d")} '
-        end = f'--endtime={end_date.strftime("%Y-%m-%d")}'
+        start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
+        end = f'--endtime={end_date.strftime("%Y-%m-%d")}-11:59:59'
         
-        print(F"collecting from : {start} to {end}")
+        print(F"collecting from : {start}to {end}")
 
         subprocess.run(sacct_command_prefix + start + end + ' >> ' + temp_data_path, shell=True)
 
@@ -65,7 +65,7 @@ def main():
 
     jobs = utils.sortJobs(jobs, 50000000)
 
-    utils.outputToJSON(jobs, output_path)
+    # utils.outputToJSON(jobs, output_path)
 
     utils.outputToCSV(jobs, output_path)
     

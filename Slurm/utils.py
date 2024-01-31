@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import json
 
@@ -25,7 +26,6 @@ def populate(jobs, temp_data_path):
             if 'fre/' not in fields[2]:
                 continue
 
-            
             next_fields = next(iterator).strip().split('|')
 
             JobId = fields[0]
@@ -39,13 +39,26 @@ def populate(jobs, temp_data_path):
 
             if memory == "":
                 memory = "0"
-            else:
                 # MaxRSS is represented originally as ****K for kilobytes
-                if "K" in memory:
+            elif "K" in memory:
                     memory = memory.rstrip("K")
 
             if (elapsed==""):
                 elapsed="0"
+
+            if "ocean" in name:
+                pattern = r"ocean_.*?(\d+)"
+                match = re.search(pattern, name)
+                if match:
+                    type = match.group(0)
+                    type = re.sub(r'\d+$', '', type)
+                    type = type.replace("_", " ")
+
+                else:
+                    type = "ocean"
+
+            elif "refineDiag" in name:
+                type = "refineDiag"
 
             # Create a dictionary entry with JobId as the keys
             jobs[JobId] = {
@@ -55,7 +68,8 @@ def populate(jobs, temp_data_path):
                 'Elapsed': int(elapsed),
                 'Node' : node,
                 'End' : end,
-                'State' : state
+                'State' : state,
+                'Type' : type
             }
     return 0
 
@@ -99,6 +113,9 @@ def removeFile(path):
         boolean : true if user inputs 'y' or file does not exist
                   false if user inputs 'n'
     '''
+    if os.path.isfile(path) == False:
+        return False
+
     result = removeHelper(path)
     if result == -2:
         print("Quitting")
@@ -133,8 +150,6 @@ def removeHelper(path):
             return 0
     return -1
 
-    
-
 def outputToJSON(jobs, file_path):
     """
     Creates and writes to a .json File. Destination is specified in the variable file_path.
@@ -155,7 +170,7 @@ def outputToCSV(jobs, file_path):
         jobs (dict) : Dictionary of all FRE jobs
         file_path (string) : The path name that the data should be written to
     """
-    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed', 'Node', 'End', 'State']
+    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed', 'Node', 'End', 'State', 'Type']
 
     with open(file_path, "w") as csvfile:
 

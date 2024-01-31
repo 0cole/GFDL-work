@@ -1,3 +1,4 @@
+import os
 import utils
 import subprocess
 from datetime import datetime, timedelta
@@ -35,9 +36,10 @@ def main():
     current_date = start_date
     sacct_command_prefix   = 'sacct -a --parsable2 --units=K -D -n -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw,NodeList,End,State '
 
-    # If user does not want to remove the files or error occurs
-    if utils.remove_and_check(temp_data_path) or utils.remove_and_check(output_path):
-        return
+    # Check if file paths are already in use and ask user if it is alright to delete them if so
+    if os.path.isfile(temp_data_path) or os.path.isfile(output_path):
+        if utils.removeFile(temp_data_path) or utils.removeFile(output_path):
+            return
 
     # When there is more than 1 week from the current_date to the end_date
     while current_date + timedelta(days=6) < end_date:

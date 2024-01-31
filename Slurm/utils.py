@@ -99,7 +99,7 @@ def removeFile(path):
         boolean : true if user inputs 'y' or file does not exist
                   false if user inputs 'n'
     '''
-    result = removeFile(path)
+    result = removeHelper(path)
     if result == -2:
         print("Quitting")
         return True

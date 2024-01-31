@@ -45,7 +45,7 @@ def main():
 
         end_of_week = current_date + timedelta(days=6)
         start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
-        end = f'--endtime={end_of_week.strftime("%Y-%m-%d")}-11:59:59'
+        end = f'--endtime={end_of_week.strftime("%Y-%m-%d")}-23:59:59'
 
         print(f"collecting from : {start}to {end}")
 
@@ -57,14 +57,14 @@ def main():
     if current_date + timedelta(days=6) >= end_date:
 
         start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
-        end = f'--endtime={end_date.strftime("%Y-%m-%d")}-11:59:59'
+        end = f'--endtime={end_date.strftime("%Y-%m-%d")}-23:59:59'
         
         print(F"collecting from : {start}to {end}")
 
         subprocess.run(sacct_command_prefix + start + end + ' >> ' + temp_data_path, shell=True)
 
     # Populate jobs dictionary from data file. Only FRE jobs will exist after populate finishes
-    utils.populate(jobs, temp_data_path)
+    jobs = utils.populate(temp_data_path)
 
     jobs = utils.sortJobs(jobs, 50000000)
 

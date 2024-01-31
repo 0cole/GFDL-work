@@ -3,62 +3,55 @@ import re
 import csv
 import json
 
-def populate(jobs, temp_data_path):
+def populate(temp_data_path):
     '''
-    Reads from the file that is created with all the output from the 'sacct' commands. Executes once
-    and creates entries in the jobs dictionary. Afterwards, filters out all the non-FRE jobs. This
-    means any job without the substring 'fre/' in its comment is excluded.
+    Reads from the file that is created with all the output from the 'sacct'
+    commands. Executes once and creates entries in the jobs dictionary. 
+    Afterwards, filters out all the non-FRE jobs. This means any job without 
+    the substring 'fre/' in its comment is excluded. Returns a dict with
+    the valid jobs.
 
-    Args:
-        jobs (dict) : Dictionary to be populated with all the FRE jobs
-        temp_data_path (string) : Path that contains the output from the sacct calls that needs to be parsed
-
-    Returns:
-        int : 0 upon success
+    Note:
+        MaxRSS is represented originally as ****K for kilobytes, and 
+        located on the job step which is the following line
     '''
+    jobs = {}
+
     with open(temp_data_path, 'r') as file:
         iterator = iter(file)
+
         for line in iterator:
-            # Split the line into fields based on '|'
             fields = line.strip().split('|')
 
-            # If not FRE job then do not include in dictionary
             if 'fre/' not in fields[2]:
                 continue
 
             next_fields = next(iterator).strip().split('|')
 
-            JobId = fields[0]
-            name = fields[1]
-            comment = fields[2]
-            memory = next_fields[3]
-            elapsed = fields[4]
-            node = fields[5]
-            end = fields[6]
-            state = fields[7]
+            JobId, name, comment, _, elapsed, node, end, state = fields
+            memory = next_fields[3].rstrip("K") if "K" in next_fields[3] else "0"
+            elapsed = elapsed if elapsed else "0"
 
-            if memory == "":
-                memory = "0"
-                # MaxRSS is represented originally as ****K for kilobytes
-            elif "K" in memory:
-                    memory = memory.rstrip("K")
+            ########### TODO: FILTER BY MEMORY HERE
 
-            if (elapsed==""):
-                elapsed="0"
+            # Get job type that is embedded in the job name
+            patterns = {
+                "ocean": r'ocean_.*?(\d+)',
+                "refineDiag": r'refineDiag',
+            }
 
-            if "ocean" in name:
-                pattern = r"ocean_.*?(\d+)"
-                match = re.search(pattern, name)
-                if match:
-                    type = match.group(0)
-                    type = re.sub(r'\d+$', '', type)
-                    type = type.replace("_", " ")
-
-                else:
-                    type = "ocean"
-
-            elif "refineDiag" in name:
-                type = "refineDiag"
+            for keyword, pattern in patterns.items():
+                if keyword in name:
+                    match = re.search(pattern, name)
+                    if match:
+                        type = match.group(0)
+                        if keyword == "ocean":
+                            type = re.sub(r'\d+$', '', type).replace("_", " ")
+                    else:
+                        type = keyword
+                    break
+            else:
+                type = ""
 
             # Create a dictionary entry with JobId as the keys
             jobs[JobId] = {
@@ -71,20 +64,12 @@ def populate(jobs, temp_data_path):
                 'State' : state,
                 'Type' : type
             }
-    return 0
+    return jobs
 
 def sortJobs(jobs, mem_cutoff):
     '''
-    Sorts the jobs by MaxRSS and filters out all the jobs that have an exit state of "FAILED"
-
-    Args:
-        jobs (dict) : the jobs to be filtered
-        mem_cutoff (int) : the desired MaxRSS cutoff number. Jobs with a MaxRSS less than the cutoff
-                           number will be filtered out and not included in the filtered dict
-
-    Returns:
-        sorted_jobs (dict) : a dictionary containing all the jobs that have a MaxRSS greater than the
-                             mem_cutoff and do not have an exit state of "FAILED"
+    Sorts the jobs by MaxRSS. Returns a sorted dict of jobs that meet the
+    memory cutoff.
     '''
     remove_jobs = []
 
@@ -104,14 +89,9 @@ def sortJobs(jobs, mem_cutoff):
 
 def removeFile(path):
     '''
-    Removes a file if it exists. Asks the user before doing so and user must reply with either 'y' or 'n'.
-
-    Args:
-        path (string) : the path name of the file to be removed
-
-    Returns:
-        boolean : true if user inputs 'y' or file does not exist
-                  false if user inputs 'n'
+    Removes a file if it exists. Asks the user before doing so and user must 
+    reply with either 'y' or 'n'. Returns True if deleting and False if user
+    wants to keep file.
     '''
     if os.path.isfile(path) == False:
         return False
@@ -127,19 +107,13 @@ def removeFile(path):
 
 def removeHelper(path):
     '''
-    Helper for removeFile.
-
-    Args:
-        path (string) : the path name of the file to be removed
-
-    Returns:
-        int : 0 upon success
-             -1 if file does not exist
-             -2 if user answers no
+    Helper for removeFile. Returns 0 upon successful delete, and a negative
+    number if failed or if user does not want file deleted.
     '''
     verify = ""
     while verify not in {"y", "n"}:
-        verify = input("Are you sure you would like to remove" + path + "? please enter either y/n : ")
+        verify = input("Are you sure you would like to remove" + path + 
+                       "? please enter either y/n : ")
 
     if verify == "n":
         return -2
@@ -152,11 +126,8 @@ def removeHelper(path):
 
 def outputToJSON(jobs, file_path):
     """
-    Creates and writes to a .json File. Destination is specified in the variable file_path.
-
-    Args:
-        jobs (dict) : Dictionary of all FRE jobs
-        file_path (string) : The path name that the data should be written to
+    Creates and writes to a .json File. Destination is specified in 
+    the variable file_path.
     """
     json_obj = json.dumps(jobs, indent=4)
     with open(file_path, "w") as outfile:
@@ -164,19 +135,14 @@ def outputToJSON(jobs, file_path):
 
 def outputToCSV(jobs, file_path):
     """
-    Creates and writes to a .csv File. Destination is specified in the variable file_path.
-
-    Args:
-        jobs (dict) : Dictionary of all FRE jobs
-        file_path (string) : The path name that the data should be written to
+    Creates and writes to a .csv File. Destination is specified in 
+    the variable file_path.
     """
-    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed', 'Node', 'End', 'State', 'Type']
+    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed',
+                   'Node', 'End', 'State', 'Type']
 
     with open(file_path, "w") as csvfile:
 
         csv_writer = csv.DictWriter(csvfile, fieldnames=field_names)
         csv_writer.writerows(jobs.values())
 
-        # for row in zip(*jobs.values()):
-        #     print(row)
-        #     csv_writer.writerow(row)

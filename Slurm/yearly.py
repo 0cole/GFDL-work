@@ -1,21 +1,20 @@
 import os
 import utils
 import subprocess
+import data_input as d
 from datetime import datetime, timedelta
 
 # Initial date
-start_date = datetime(2023, 1, 1)
+start_date = d.start
 
 # End date
-end_date = datetime(2023, 12, 31)
+end_date = d.end
 
 # Temporary data path
-temp_data_path = './data_temp'
+temp_data_path = d.temp
 
 # Output JSON filepath
-output_path = "./data_output-test.csv"
-
-# TODO: make sure conversion from megabytes works as intended
+output_path = d.out
 
 def main():
     '''

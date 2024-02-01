@@ -3,7 +3,7 @@ import re
 import csv
 import json
 
-def populate(temp_data_path, mem_cutoff):
+def populate(temp_data_path, mem_cutoff, name_requirement):
     '''
     Reads from the file that is created with all the output from the 'sacct'
     commands. Executes once and creates entries in the jobs dictionary. 
@@ -23,35 +23,24 @@ def populate(temp_data_path, mem_cutoff):
         for line in iterator:
             fields = line.strip().split('|')
 
-            if 'fre/' not in fields[2]:
-                continue
-
             next_fields = next(iterator).strip().split('|')
 
-            JobId, name, comment, _, elapsed, node, end, state = fields
+            JobId, name, comment, _, elapsed, node, end, state, exitcode, user = fields
             memory = next_fields[3].rstrip("K") if "K" in next_fields[3] else "0"
             elapsed = elapsed if elapsed else "0"
+
+            if name_requirement not in name:
+                continue
+
+            if "Baudilio" not in user:
+                continue
 
             if int(memory) < mem_cutoff:
                 continue
 
-            # Get job type that is embedded in the job name
-            patterns = {
-                "ocean": r'ocean_.*?(\d+)',
-                "refineDiag": r'refineDiag',
-            }
-
-            for keyword, pattern in patterns.items():
-                if keyword in name:
-                    match = re.search(pattern, name)
-                    type = match.group(0) if match else keyword
-                    type = re.sub(r'\d+$', '', type).replace("_", " ") if keyword == "ocean" else type
-                    break
-            else:
-                type = ""
-
             # Create a dictionary entry with JobId as the keys
             jobs[JobId] = {
+                'id' : JobId,
                 'JobName': name,
                 'Comment': comment,
                 'Memory': int(memory),
@@ -59,7 +48,8 @@ def populate(temp_data_path, mem_cutoff):
                 'Node' : node,
                 'End' : end,
                 'State' : state,
-                'Type' : type
+                'ExitCode' : exitcode,
+                'User' : user
             }
     return jobs
 
@@ -125,8 +115,8 @@ def outputToCSV(jobs, file_path):
     Creates and writes to a .csv File. Destination is specified in 
     the variable file_path.
     """
-    field_names = ['JobName', 'Comment', 'Memory', 'Elapsed',
-                   'Node', 'End', 'State', 'Type']
+    field_names = ['id', 'JobName', 'Comment', 'Memory', 'Elapsed',
+                   'Node', 'End', 'State', 'ExitCode', 'User']
 
     with open(file_path, "w") as csvfile:
         csv_writer = csv.DictWriter(csvfile, fieldnames=field_names)

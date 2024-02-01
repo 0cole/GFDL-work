@@ -10,6 +10,8 @@ end_date = d.end
 
 mem_cutoff = d.cutoff
 
+name_requirement = d.name
+
 temp_data_path = d.temp
 
 output_path = d.out
@@ -28,10 +30,12 @@ def main():
                             Node
                             End
                             State
+                            ExitCode
+                            User
     '''
     jobs = {}
     current_date = start_date
-    sacct_command_prefix   = 'sacct -a --parsable2 --units=K -D -n -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw,NodeList,End,State '
+    sacct_command_prefix   = 'sacct -a --parsable2 --units=K -D -n -o JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw,NodeList,End,State,ExitCode,User  '
 
     # Check if file paths are already in use and ask user if it is alright to delete them if so
     if os.path.isfile(temp_data_path) or os.path.isfile(output_path):
@@ -64,7 +68,7 @@ def main():
 
     # Populate jobs dictionary from data file. Only FRE jobs that have a size greater
     # than the memory cutoff will exist after populate finishes
-    jobs = utils.populate(temp_data_path, mem_cutoff)
+    jobs = utils.populate(temp_data_path, mem_cutoff, name_requirement)
 
     jobs = utils.sortJobs(jobs)
 

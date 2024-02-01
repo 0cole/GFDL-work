@@ -2,6 +2,49 @@ import os
 import re
 import csv
 import json
+import subprocess
+from datetime import timedelta
+
+def generate(start_date, end_date, temp_data_path):
+    '''
+    Queries the SLURM database all the jobs from the start_date 
+    to the end_date and caches them in a file. Only call this once. 
+    Include the desired path name for this cache when calling the 
+    function as well as the start date. Do not overlap years.
+    '''
+    current_date = start_date
+    sacct_command_prefix = 'sacct -a --parsable2 --units=K -D -n -o ' + \
+                           'JobIDRaw,JobName,Comment,MaxRss,ElapsedRaw, ' + \
+                           'NodeList,End,State,ExitCode,User '
+
+    # Check if file paths are already in use and ask user if it is alright to delete them if so
+    if os.path.isfile(temp_data_path):
+        if removeFile(temp_data_path):
+            return
+
+    # When there is more than 1 week from the current_date to the end_date
+    while current_date + timedelta(days=6) < end_date:
+
+        end_of_week = current_date + timedelta(days=6)
+        start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
+        end = f'--endtime={end_of_week.strftime("%Y-%m-%d")}-23:59:59'
+
+        print(f"collecting from : {start}to {end}")
+
+        subprocess.run(sacct_command_prefix + start + end + ' >> ' + temp_data_path, shell=True)
+
+        current_date += timedelta(weeks=1)
+
+    # When there is less than 1 week from the current_date to the end_date
+    if current_date + timedelta(days=6) >= end_date:
+
+        start = f'--starttime={current_date.strftime("%Y-%m-%d")}-00:00:00 '
+        end = f'--endtime={end_date.strftime("%Y-%m-%d")}-23:59:59'
+        
+        print(F"collecting from : {start}to {end}")
+
+        subprocess.run(sacct_command_prefix + start + end 
+                       + ' >> ' + temp_data_path, shell=True)
 
 def populate(temp_data_path, mem_cutoff, name_requirement):
     '''
@@ -29,14 +72,14 @@ def populate(temp_data_path, mem_cutoff, name_requirement):
             memory = next_fields[3].rstrip("K") if "K" in next_fields[3] else "0"
             elapsed = elapsed if elapsed else "0"
 
-            if name_requirement not in name:
-                continue
+            # if name_requirement not in name:
+            #     continue
 
             if "Baudilio" not in user:
                 continue
 
-            if int(memory) < mem_cutoff:
-                continue
+            # if int(memory) < mem_cutoff:
+            #     continue
 
             # Create a dictionary entry with JobId as the keys
             jobs[JobId] = {
@@ -51,6 +94,7 @@ def populate(temp_data_path, mem_cutoff, name_requirement):
                 'ExitCode' : exitcode,
                 'User' : user
             }
+
     return jobs
 
 def sortJobs(jobs):

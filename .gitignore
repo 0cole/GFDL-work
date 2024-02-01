@@ -1,2 +1,4 @@
 data*
 Slurm/__pycache__/*
+Slurm/input/*
+Slurm/output/*

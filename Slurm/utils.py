@@ -3,7 +3,7 @@ import re
 import csv
 import json
 
-def populate(temp_data_path):
+def populate(temp_data_path, mem_cutoff):
     '''
     Reads from the file that is created with all the output from the 'sacct'
     commands. Executes once and creates entries in the jobs dictionary. 
@@ -32,7 +32,8 @@ def populate(temp_data_path):
             memory = next_fields[3].rstrip("K") if "K" in next_fields[3] else "0"
             elapsed = elapsed if elapsed else "0"
 
-            ########### TODO: FILTER BY MEMORY HERE
+            if int(memory) < mem_cutoff:
+                continue
 
             # Get job type that is embedded in the job name
             patterns = {
@@ -43,12 +44,8 @@ def populate(temp_data_path):
             for keyword, pattern in patterns.items():
                 if keyword in name:
                     match = re.search(pattern, name)
-                    if match:
-                        type = match.group(0)
-                        if keyword == "ocean":
-                            type = re.sub(r'\d+$', '', type).replace("_", " ")
-                    else:
-                        type = keyword
+                    type = match.group(0) if match else keyword
+                    type = re.sub(r'\d+$', '', type).replace("_", " ") if keyword == "ocean" else type
                     break
             else:
                 type = ""
@@ -66,24 +63,13 @@ def populate(temp_data_path):
             }
     return jobs
 
-def sortJobs(jobs, mem_cutoff):
+def sortJobs(jobs):
     '''
-    Sorts the jobs by MaxRSS. Returns a sorted dict of jobs that meet the
-    memory cutoff.
+    Sorts and returns the jobs in job dict by maxRSS.
     '''
-    remove_jobs = []
-
     sorted_jobs = dict(sorted(jobs.items(), key=lambda item: item[1]['Memory']))
 
     sorted_jobs = dict(reversed(list(sorted_jobs.items())))
-
-    for jobId in sorted_jobs:
-        job_data = jobs.get(jobId)
-        if job_data['Memory'] < mem_cutoff:
-            remove_jobs.append(jobId)
-
-    for jobId in remove_jobs:
-        sorted_jobs.pop(jobId)
 
     return sorted_jobs
 
@@ -97,6 +83,7 @@ def removeFile(path):
         return False
 
     result = removeHelper(path)
+
     if result == -2:
         print("Quitting")
         return True
@@ -142,7 +129,6 @@ def outputToCSV(jobs, file_path):
                    'Node', 'End', 'State', 'Type']
 
     with open(file_path, "w") as csvfile:
-
         csv_writer = csv.DictWriter(csvfile, fieldnames=field_names)
         csv_writer.writerows(jobs.values())
 

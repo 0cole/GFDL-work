@@ -2,18 +2,16 @@ import os
 import utils
 import subprocess
 import data_input as d
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-# Initial date
 start_date = d.start
 
-# End date
 end_date = d.end
 
-# Temporary data path
+mem_cutoff = d.cutoff
+
 temp_data_path = d.temp
 
-# Output JSON filepath
 output_path = d.out
 
 def main():
@@ -61,20 +59,19 @@ def main():
         
         print(F"collecting from : {start}to {end}")
 
-        subprocess.run(sacct_command_prefix + start + end + ' >> ' + temp_data_path, shell=True)
+        subprocess.run(sacct_command_prefix + start + end 
+                       + ' >> ' + temp_data_path, shell=True)
 
-    # Populate jobs dictionary from data file. Only FRE jobs will exist after populate finishes
-    jobs = utils.populate(temp_data_path)
+    # Populate jobs dictionary from data file. Only FRE jobs that have a size greater
+    # than the memory cutoff will exist after populate finishes
+    jobs = utils.populate(temp_data_path, mem_cutoff)
 
-    jobs = utils.sortJobs(jobs, 50000000)
-
-    # utils.outputToJSON(jobs, output_path)
+    jobs = utils.sortJobs(jobs)
 
     utils.outputToCSV(jobs, output_path)
     
     print("Completed, data output to: " + output_path + ", total jobs: ", len(jobs))
 
-    # Remove temp file
     subprocess.run(["rm", "-f", temp_data_path])
 
 
